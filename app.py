@@ -1,3 +1,329 @@
+# from fastapi import FastAPI
+# from sentence_transformers import SentenceTransformer
+# from pydantic import BaseModel
+# import numpy as np
+# from sklearn.metrics.pairwise import cosine_similarity
+# import os
+# from groq import Groq
+# import chromadb
+# from typing import List, Dict, Any
+
+# app = FastAPI()
+
+# # Load model dan database
+# embedding_model = SentenceTransformer("sentence-transformers/multi-qa-mpnet-base-dot-v1")
+# chroma_client = chromadb.PersistentClient(path="Database")
+# collection = chroma_client.get_or_create_collection(name="nutrition")
+
+
+# class QueryRequest(BaseModel):
+#     query: str
+#     top_k: int = 5
+
+
+# @app.get("/")
+# def read_root():
+#     return {"message": "timuca"}
+
+
+# def retrieve_documents(query: str, top_k: int = 5):
+#     query_embedding = embedding_model.encode([query]).tolist()[0]
+#     results = collection.query(query_embeddings=[query_embedding], n_results=top_k)
+
+#     retrieved_docs = []
+#     for metadata_list in results.get("metadatas", []):
+#         if metadata_list:
+#             retrieved_docs.extend(metadata_list)
+
+#     return retrieved_docs
+
+
+# def sentence_similarity(query: str, retrieved_docs):
+#     if not retrieved_docs:
+#         return None
+
+#     query_embedding = embedding_model.encode([query])
+#     doc_embeddings = embedding_model.encode([doc['name'] for doc in retrieved_docs])
+
+#     similarities = cosine_similarity(query_embedding, doc_embeddings)[0]
+#     best_match_idx = np.argmax(similarities)
+
+#     return retrieved_docs[best_match_idx] if retrieved_docs else None
+
+
+# def get_summary(query: str):
+#     groq_run = GroqRunTime()
+#     system_prompt = (
+#         "Anda adalah asisten pengambil nama makanan dari kalimat. "
+#         "Tolong ubah atau ringkas kalimat pengguna agar lebih jelas untuk pencarian makanan. "
+#         "Hanya respon dengan ringkasan makanan pengguna."
+#     )
+#     response = groq_run.generate_response(system_prompt, query)
+#     print(response.choices[0].message.content)
+#     return response.choices[0].message.content
+
+# class GroqRunTime():
+#     def __init__(self):
+#         with open('api_key.txt', 'r') as txt_r:
+#             os.environ["GROQ_API_KEY"] = txt_r.readlines()[0].strip()
+        
+#         self.client = Groq(
+#             api_key=os.environ.get("GROQ_API_KEY"),
+#         )
+
+#     def generate_response(self, system_prompt, user_prompt):
+#         responses = self.client.chat.completions.create(
+#             messages=[
+#                 {
+#                     "role": "system",
+#                     "content": system_prompt
+#                 },
+#                 {
+#                     "role": "user",
+#                     "content": user_prompt
+#                 }
+#             ],
+#             model="llama3-70b-8192"
+#         )
+#         return responses
+
+# @app.post("/get_summary/")
+# def get_summary_endpoint(request: QueryRequest):
+#     refined_food = get_summary(request.query)
+#     return {"refined_food": refined_food}
+
+# @app.post("/search/")
+# def search_food(request: QueryRequest):
+#     retrieved_docs = retrieve_documents(request.query, top_k=request.top_k)
+
+#     if not retrieved_docs:
+#         return {"results": []}
+
+#     best_match = sentence_similarity(request.query, retrieved_docs)
+
+#     return {"results": best_match}
+
+# class ChatMessage(BaseModel):
+#     role: str
+#     content: str
+
+# class UserPrompt(BaseModel):
+#     user_id: str
+#     user_prompt: str
+#     previous_chat: List[ChatMessage]
+
+# @app.post("/chatbot/")
+# def food_chatbot(request: UserPrompt):
+#     # Gabungkan previous_chat dengan user_prompt menjadi satu percakapan panjang
+#     chat_history = ""
+#     for message in request.previous_chat:
+#         role = "User" if message.role == "user" else "Asisten"
+#         chat_history += f"{role}: {message.content}\n"
+#     chat_history += f"User: {request.user_prompt}\n"
+
+#     # Dapatkan ringkasan makanan berdasarkan keseluruhan konteks
+#     refined_food = get_summary(chat_history)
+
+#     retrieved_docs = retrieve_documents(refined_food, top_k=3)
+
+#     if not retrieved_docs:
+#         return {"results": []}
+
+#     best_match = sentence_similarity(refined_food, retrieved_docs)
+
+#     if not best_match:
+#         return {"results": []}
+
+#     groq_run = GroqRunTime()
+#     system_prompt = (
+#         f"Anda adalah asisten pencarian kandungan makanan berbahasa Indonesia. "
+#         f"Nama anda adalah Calorify"
+#         f"Jawab pertanyaan user berdasarkan informasi makanan ini:\n"
+#         f"Nama makanan: {best_match.get('name', '-')}, "
+#         f"Kalori: {best_match.get('calories', '-')}, "
+#         f"Karbohidrat: {best_match.get('carbohydrate', '-')}, "
+#         f"Lemak: {best_match.get('fat', '-')}, "
+#         f"Protein: {best_match.get('proteins', '-')}\n\n"
+#         f"Berikut adalah percakapan sebelumnya:\n{chat_history}"
+#     )
+#     response = groq_run.generate_response(system_prompt, request.user_prompt)
+
+#     return {
+#         "results": best_match,
+#         "refined_food": refined_food,
+#         "llm_response": response.choices[0].message.content,
+#         "image_url": best_match.get('image', None)
+#     }
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+#mini
+
+# from fastapi import FastAPI
+# from sentence_transformers import SentenceTransformer
+# from pydantic import BaseModel
+# import numpy as np
+# from sklearn.metrics.pairwise import cosine_similarity
+# import os
+# from groq import Groq
+# import chromadb
+# from typing import List, Dict, Any
+
+# app = FastAPI()
+
+# # Load model dan database
+# embedding_model = SentenceTransformer("sentence-transformers/multi-qa-MiniLM-L6-dot-v1")
+# chroma_client = chromadb.PersistentClient(path="Database")
+# collection = chroma_client.get_or_create_collection(name="nutrition")
+
+
+# class QueryRequest(BaseModel):
+#     query: str
+#     top_k: int = 5
+
+
+# @app.get("/")
+# def read_root():
+#     return {"message": "timuca"}
+
+
+# def retrieve_documents(query: str, top_k: int = 5):
+#     query_embedding = embedding_model.encode([query]).tolist()[0]
+#     results = collection.query(query_embeddings=[query_embedding], n_results=top_k)
+
+#     retrieved_docs = []
+#     for metadata_list in results.get("metadatas", []):
+#         if metadata_list:
+#             retrieved_docs.extend(metadata_list)
+
+#     return retrieved_docs
+
+
+# def sentence_similarity(query: str, retrieved_docs):
+#     if not retrieved_docs:
+#         return None
+
+#     query_embedding = embedding_model.encode([query])
+#     doc_embeddings = embedding_model.encode([doc['name'] for doc in retrieved_docs])
+
+#     similarities = cosine_similarity(query_embedding, doc_embeddings)[0]
+#     best_match_idx = np.argmax(similarities)
+
+#     return retrieved_docs[best_match_idx] if retrieved_docs else None
+
+
+# def get_summary(query: str):
+#     groq_run = GroqRunTime()
+#     system_prompt = (
+#         "Anda adalah asisten pengambil nama makanan dari kalimat. "
+#         "Tolong ubah atau ringkas kalimat pengguna agar lebih jelas untuk pencarian makanan. "
+#         "Hanya respon dengan ringkasan makanan pengguna."
+#     )
+#     response = groq_run.generate_response(system_prompt, query)
+#     print(response.choices[0].message.content)
+#     return response.choices[0].message.content
+
+# class GroqRunTime():
+#     def __init__(self):
+#         with open('api_key.txt', 'r') as txt_r:
+#             os.environ["GROQ_API_KEY"] = txt_r.readlines()[0].strip()
+        
+#         self.client = Groq(
+#             api_key=os.environ.get("GROQ_API_KEY"),
+#         )
+
+#     def generate_response(self, system_prompt, user_prompt):
+#         responses = self.client.chat.completions.create(
+#             messages=[
+#                 {
+#                     "role": "system",
+#                     "content": system_prompt
+#                 },
+#                 {
+#                     "role": "user",
+#                     "content": user_prompt
+#                 }
+#             ],
+#             model="llama3-70b-8192"
+#         )
+#         return responses
+
+# @app.post("/get_summary/")
+# def get_summary_endpoint(request: QueryRequest):
+#     refined_food = get_summary(request.query)
+#     return {"refined_food": refined_food}
+
+# @app.post("/search/")
+# def search_food(request: QueryRequest):
+#     retrieved_docs = retrieve_documents(request.query, top_k=request.top_k)
+
+#     if not retrieved_docs:
+#         return {"results": []}
+
+#     best_match = sentence_similarity(request.query, retrieved_docs)
+
+#     return {"results": best_match}
+
+# class ChatMessage(BaseModel):
+#     role: str
+#     content: str
+
+# class UserPrompt(BaseModel):
+#     user_id: str
+#     user_prompt: str
+#     previous_chat: List[ChatMessage]
+
+# @app.post("/chatbot/")
+# def food_chatbot(request: UserPrompt):
+#     # Gabungkan previous_chat dengan user_prompt menjadi satu percakapan panjang
+#     chat_history = ""
+#     for message in request.previous_chat:
+#         role = "User" if message.role == "user" else "Asisten"
+#         chat_history += f"{role}: {message.content}\n"
+#     chat_history += f"User: {request.user_prompt}\n"
+
+#     # Dapatkan ringkasan makanan berdasarkan keseluruhan konteks
+#     refined_food = get_summary(chat_history)
+
+#     retrieved_docs = retrieve_documents(refined_food, top_k=3)
+
+#     if not retrieved_docs:
+#         return {"results": []}
+
+#     best_match = sentence_similarity(refined_food, retrieved_docs)
+
+#     if not best_match:
+#         return {"results": []}
+
+#     groq_run = GroqRunTime()
+#     system_prompt = (
+#         f"Anda adalah asisten pencarian kandungan makanan berbahasa Indonesia. "
+#         f"Nama anda adalah Calorify"
+#         f"Jawab pertanyaan user berdasarkan informasi makanan ini:\n"
+#         f"Nama makanan: {best_match.get('name', '-')}, "
+#         f"Kalori: {best_match.get('calories', '-')}, "
+#         f"Karbohidrat: {best_match.get('carbohydrate', '-')}, "
+#         f"Lemak: {best_match.get('fat', '-')}, "
+#         f"Protein: {best_match.get('proteins', '-')}\n\n"
+#         f"Berikut adalah percakapan sebelumnya:\n{chat_history}"
+#     )
+#     response = groq_run.generate_response(system_prompt, request.user_prompt)
+
+#     return {
+#         "results": best_match,
+#         "refined_food": refined_food,
+#         "llm_response": response.choices[0].message.content,
+#         "image_url": best_match.get('image', None)
+#     }
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+#mini tanpa sentence_transformer
 from fastapi import FastAPI
 from sentence_transformers import SentenceTransformer
 from pydantic import BaseModel
@@ -11,7 +337,7 @@ from typing import List, Dict, Any
 app = FastAPI()
 
 # Load model dan database
-embedding_model = SentenceTransformer("sentence-transformers/multi-qa-mpnet-base-dot-v1")
+embedding_model = SentenceTransformer("sentence-transformers/multi-qa-MiniLM-L6-dot-v1")
 chroma_client = chromadb.PersistentClient(path="Database")
 collection = chroma_client.get_or_create_collection(name="nutrition")
 
@@ -26,29 +352,28 @@ def read_root():
     return {"message": "timuca"}
 
 
-def retrieve_documents(query: str, top_k: int = 5):
+# def retrieve_documents(query: str, top_k: int = 5):
+#     query_embedding = embedding_model.encode([query]).tolist()[0]
+#     results = collection.query(query_embeddings=[query_embedding], n_results=top_k)
+
+#     retrieved_docs = []
+#     for metadata_list in results.get("metadatas", []):
+#         if metadata_list:
+#             retrieved_docs.extend(metadata_list)
+
+#     return retrieved_docs
+
+def retrieve_documents(query: str):
     query_embedding = embedding_model.encode([query]).tolist()[0]
-    results = collection.query(query_embeddings=[query_embedding], n_results=top_k)
+    results = collection.query(query_embeddings=[query_embedding], n_results=1)  # top_k=1 tetap, tapi langsung ambil hasil pertama
 
     retrieved_docs = []
     for metadata_list in results.get("metadatas", []):
         if metadata_list:
             retrieved_docs.extend(metadata_list)
 
-    return retrieved_docs
+    return retrieved_docs[0] if retrieved_docs else None  # Ambil hanya satu
 
-
-def sentence_similarity(query: str, retrieved_docs):
-    if not retrieved_docs:
-        return None
-
-    query_embedding = embedding_model.encode([query])
-    doc_embeddings = embedding_model.encode([doc['name'] for doc in retrieved_docs])
-
-    similarities = cosine_similarity(query_embedding, doc_embeddings)[0]
-    best_match_idx = np.argmax(similarities)
-
-    return retrieved_docs[best_match_idx] if retrieved_docs else None
 
 
 def get_summary(query: str):
@@ -94,14 +419,13 @@ def get_summary_endpoint(request: QueryRequest):
 
 @app.post("/search/")
 def search_food(request: QueryRequest):
-    retrieved_docs = retrieve_documents(request.query, top_k=request.top_k)
+    best_match = retrieve_documents(request.query)
 
-    if not retrieved_docs:
+    if not best_match:
         return {"results": []}
 
-    best_match = sentence_similarity(request.query, retrieved_docs)
-
     return {"results": best_match}
+
 
 class ChatMessage(BaseModel):
     role: str
@@ -114,22 +438,14 @@ class UserPrompt(BaseModel):
 
 @app.post("/chatbot/")
 def food_chatbot(request: UserPrompt):
-    # Gabungkan previous_chat dengan user_prompt menjadi satu percakapan panjang
     chat_history = ""
     for message in request.previous_chat:
         role = "User" if message.role == "user" else "Asisten"
         chat_history += f"{role}: {message.content}\n"
     chat_history += f"User: {request.user_prompt}\n"
 
-    # Dapatkan ringkasan makanan berdasarkan keseluruhan konteks
     refined_food = get_summary(chat_history)
-
-    retrieved_docs = retrieve_documents(refined_food, top_k=3)
-
-    if not retrieved_docs:
-        return {"results": []}
-
-    best_match = sentence_similarity(refined_food, retrieved_docs)
+    best_match = retrieve_documents(refined_food)  # langsung pakai retrieve_documents, tidak perlu top_k dan similarity
 
     if not best_match:
         return {"results": []}
@@ -137,7 +453,7 @@ def food_chatbot(request: UserPrompt):
     groq_run = GroqRunTime()
     system_prompt = (
         f"Anda adalah asisten pencarian kandungan makanan berbahasa Indonesia. "
-        f"Nama anda adalah Calorify"
+        f"Nama anda adalah Calorify. "
         f"Jawab pertanyaan user berdasarkan informasi makanan ini:\n"
         f"Nama makanan: {best_match.get('name', '-')}, "
         f"Kalori: {best_match.get('calories', '-')}, "
@@ -154,6 +470,7 @@ def food_chatbot(request: UserPrompt):
         "llm_response": response.choices[0].message.content,
         "image_url": best_match.get('image', None)
     }
+
 
 if __name__ == "__main__":
     import uvicorn
