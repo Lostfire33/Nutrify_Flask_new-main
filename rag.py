@@ -4,7 +4,6 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from LLM.groq_runtime import GroqRunTime
 
-
 class RagChroma:
     def __init__(self, db_path="Database"):
         self.db_path = db_path
