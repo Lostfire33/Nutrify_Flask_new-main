@@ -3,7 +3,8 @@ from sentence_transformers import SentenceTransformer
 from pydantic import BaseModel
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from LLM.groq_runtime import GroqRunTime
+import os
+from groq import Groq
 import chromadb
 from typing import List, Dict, Any
 
@@ -60,6 +61,31 @@ def get_summary(query: str):
     response = groq_run.generate_response(system_prompt, query)
     print(response.choices[0].message.content)
     return response.choices[0].message.content
+
+class GroqRunTime():
+    def __init__(self):
+        with open('api_key.txt', 'r') as txt_r:
+            os.environ["GROQ_API_KEY"] = txt_r.readlines()[0].strip()
+        
+        self.client = Groq(
+            api_key=os.environ.get("GROQ_API_KEY"),
+        )
+
+    def generate_response(self, system_prompt, user_prompt):
+        responses = self.client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            model="llama3-70b-8192"
+        )
+        return responses
 
 @app.post("/get_summary/")
 def get_summary_endpoint(request: QueryRequest):
