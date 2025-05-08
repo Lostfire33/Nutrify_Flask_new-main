@@ -61,6 +61,10 @@ def get_summary(query: str):
     print(response.choices[0].message.content)
     return response.choices[0].message.content
 
+@app.post("/get_summary/")
+def get_summary_endpoint(request: QueryRequest):
+    refined_food = get_summary(request.query)
+    return {"refined_food": refined_food}
 
 @app.post("/search/")
 def search_food(request: QueryRequest):
